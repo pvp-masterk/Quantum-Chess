@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Chess - Advanced AI Chess Platform</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --light: #ecf0f1;
+            --dark: #1a252f;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--primary);
+            color: var(--light);
+            overflow-x: hidden;
+        }
+        
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 1s ease-out;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Main Layout */
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr 250px;
+            grid-template-rows: 80px 1fr;
+            min-height: 100vh;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        .container.loaded {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Header */
+        header {
+            grid-column: 1 / 4;
+            background-color: var(--secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo i {
+            margin-right: 10px;
+            font-size: 28px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .nav-link {
+            color: var(--light);
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-link.active {
+            background-color: var(--accent);
+            color: white;
+        }
+        
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid var(--accent);
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .avatar:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Sidebars */
+        .sidebar {
+            background-color: var(--secondary);
+            padding: 20px;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+        
+        .left-sidebar {
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .right-sidebar {
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar-title i {
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar-title i:hover {
+            transform: rotate(90deg);
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 20px;
+            background-color: var(--primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Chess Board */
+        .chess-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .chess-board {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .square {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .square.light {
+            background-color: #f0d9b5;
+        }
+        
+        .square.dark {
+            background-color: #b58863;
+        }
+        
+        .square.highlight {
+            background-color: rgba(52, 152, 219, 0.5);
+        }
+        
+        .square.move-option {
+            background-color: rgba(46, 204, 113, 0.5);
+            cursor: pointer;
+        }
+        
+        .square.move-option::after {
+            content: '';
+            width: 30%;
+            height: 30%;
+            border-radius: 50%;
+            background-color: rgba(46, 204, 113, 0.8);
+        }
+        
+        .square.capture-option {
+            background-color: rgba(231, 76, 60, 0.5);
+            cursor: pointer;
+        }
+        
+        .piece {
+            width: 80%;
+            height: 80%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            cursor: grab;
+            position: relative;
+            z-index: 10;
+            transition: transform 0.2s ease;
+        }
+        
+        .piece.dragging {
+            transform: scale(1.2);
+            z-index: 20;
+            cursor: grabbing;
+        }
+        
+        /* Game Controls */
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .control-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .control-btn.secondary {
+            background-color: var(--secondary);
+        }
+        
+        .control-btn.danger {
+            background-color: var(--danger);
+        }
+        
+        .control-btn.success {
+            background-color: var(--success);
+        }
+        
+        /* Game Info */
+        .game-info {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 20px;
+            background-color: var(--secondary);
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .players {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .player {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .player.white {
+            color: #f0d9b5;
+        }
+        
+        .player.black {
+            color: #b58863;
+        }
+        
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+        
+        .player-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .player-name {
+            font-weight: bold;
+        }
+        
+        .player-rating {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .game-status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .move-history {
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .move-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            font-size: 14px;
+        }
+        
+        .move-item {
+            padding: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .move-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .move-item.active {
+            background-color: var(--accent);
+        }
+        
+        /* AI Selection */
+        .ai-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .ai-bot {
+            background-color: var(--secondary);
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .ai-bot:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border-color: var(--accent);
+        }
+        
+        .ai-bot.selected {
+            border-color: var(--success);
+            background-color: rgba(46, 204, 113, 0.1);
+        }
+        
+        .ai-bot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .ai-bot-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .ai-bot-difficulty {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background-color: var(--dark);
+        }
+        
+        .ai-bot-description {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+        
+        .ai-bot-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+        
+        .ai-bot-rating {
+            color: var(--accent);
+        }
+        
+        /* Friends List */
+        .friends-list {
+            margin-top: 15px;
+        }
+        
+        .friend-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .friend-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .friend-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        
+        .friend-info {
+            flex: 1;
+        }
+        
+        .friend-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .friend-status {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        .friend-status.online {
+            color: var(--success);
+        }
+        
+        .friend-status.offline {
+            color: var(--danger);
+        }
+        
+        .friend-status.playing {
+            color: var(--warning);
+        }
+        
+        .friend-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .friend-action-btn {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .friend-action-btn:hover {
+            background-color: var(--accent);
+            transform: scale(1.1);
+        }
+        
+        /* Chat */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 300px;
+            background-color: var(--secondary);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            padding: 10px 15px;
+            background-color: var(--dark);
+            font-weight: bold;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.1);
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .message.self {
+            margin-left: auto;
+            background-color: var(--accent);
+            color: white;
+        }
+        
+        .message-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 3px;
+            opacity: 0.8;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            background-color: var(--dark);
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+        }
+        
+        .chat-input button {
+            margin-left: 10px;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            background-color: var(--accent);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-input button:hover {
+            background-color: #2980b9;
+        }
+        
+        /* Modals */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .modal-content {
+            background-color: var(--secondary);
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .modal-close {
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .modal-close:hover {
+            transform: rotate(90deg);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+        }
+        
+        .form-group input:focus {
+            border-color: var(--accent);
+        }
+        
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        .slide-in {
+            animation: slideIn 0.5s ease forwards;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .left-sidebar, .right-sidebar {
+                position: fixed;
+                top: 80px;
+                bottom: 0;
+                width: 250px;
+                z-index: 100;
+                transform: translateX(-100%);
+            }
+            
+            .left-sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .right-sidebar.active {
+                right: 0;
+                transform: translateX(0);
+            }
+            
+            .right-sidebar {
+                right: 0;
+                transform: translateX(100%);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .chess-container {
+                max-width: 100%;
+            }
+            
+            .game-controls {
+                flex-wrap: wrap;
+            }
+            
+            .control-btn {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen">
+        <div class="loading-spinner"></div>
+        <h2>Quantum Chess</h2>
+        <p>Loading advanced chess experience...</p>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <i class="fas fa-chess-queen"></i>
+                <span>Quantum Chess</span>
+            </div>
+            <div class="nav-links">
+                <a href="#" class="nav-link active" data-section="play"><i class="fas fa-chess-board"></i> Play</a>
+                <a href="#" class="nav-link" data-section="ai"><i class="fas fa-robot"></i> AI Bots</a>
+                <a href="#" class="nav-link" data-section="online"><i class="fas fa-globe"></i> Online</a>
+                <a href="#" class="nav-link" data-section="friends"><i class="fas fa-users"></i> Friends</a>
+            </div>
+            <div class="user-profile">
+                <div class="avatar" id="user-avatar">JD</div>
+                <span>JohnDoe</span>
+            </div>
+        </header>
+        
+        <!-- Left Sidebar -->
+        <div class="sidebar left-sidebar">
+            <div class="sidebar-title">
+                <span>Game Options</span>
+                <i class="fas fa-cog"></i>
+            </div>
+            
+            <div class="form-group">
+                <label for="game-mode">Game Mode</label>
+                <select id="game-mode">
+                    <option value="classic">Classic Chess</option>
+                    <option value="960">Chess 960</option>
+                    <option value="atomic">Atomic Chess</option>
+                    <option value="crazyhouse">Crazyhouse</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="time-control">Time Control</label>
+                <select id="time-control">
+                    <option value="1|0">1 min</option>
+                    <option value="3|0">3 min</option>
+                    <option value="5|0">5 min</option>
+                    <option value="10|0">10 min</option>
+                    <option value="15|10" selected>15|10</option>
+                    <option value="30|0">30 min</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="board-theme">Board Theme</label>
+                <select id="board-theme">
+                    <option value="default">Default</option>
+                    <option value="wood">Wood</option>
+                    <option value="dark">Dark</option>
+                    <option value="blue">Blue</option>
+                </select>
+            </div>
+            
+            <button class="control-btn secondary" id="new-game-btn">
+                <i class="fas fa-plus"></i> New Game
+            </button>
+        </div>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Play Section -->
+            <div class="section" id="play-section">
+                <div class="chess-container">
+                    <div class="chess-board" id="chess-board">
+                        <!-- Chess board squares will be generated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div class="game-controls">
+                    <button class="control-btn secondary" id="flip-board-btn">
+                        <i class="fas fa-sync-alt"></i> Flip Board
+                    </button>
+                    <button class="control-btn" id="undo-move-btn">
+                        <i class="fas fa-undo"></i> Undo
+                    </button>
+                    <button class="control-btn danger" id="resign-btn">
+                        <i class="fas fa-flag"></i> Resign
+                    </button>
+                    <button class="control-btn success" id="offer-draw-btn">
+                        <i class="fas fa-handshake"></i> Offer Draw
+                    </button>
+                </div>
+                
+                <div class="game-info">
+                    <div class="players">
+                        <div class="player white">
+                            <div class="player-avatar">AI</div>
+                            <div class="player-info">
+                                <div class="player-name">Quantum Bot</div>
+                                <div class="player-rating">Rating: 1800</div>
+                            </div>
+                        </div>
+                        <div class="player black">
+                            <div class="player-avatar">JD</div>
+                            <div class="player-info">
+                                <div class="player-name">JohnDoe</div>
+                                <div class="player-rating">Rating: 1650</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="game-status">
+                        <i class="fas fa-clock"></i> White's turn
+                    </div>
+                    
+                    <div class="move-history">
+                        <div class="move-list" id="move-list">
+                            <!-- Move history will be generated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Bots Section -->
+            <div class="section" id="ai-section" style="display: none;">
+                <h2>Challenge an AI Opponent</h2>
+                <p>Select from our advanced chess bots with different playing styles and difficulty levels.</p>
+                
+                <div class="ai-selection">
+                    <div class="ai-bot" data-bot="quantum">
+                        <div class="ai-bot-header">
+                            <div class="ai-bot-name">Quantum Bot</div>
+                            <div class="ai-bot-difficulty">Expert</div>
+                        </div>
+                        <div class="ai-bot-description">
+                            Uses quantum algorithms to evaluate multiple move possibilities simultaneously.
+                        </div>
+                        <div class="ai-bot-stats">
+                            <div class="ai-bot-rating">Rating: 1800-2000</div>
+                            <div class="ai-bot-winrate">Win Rate: 85%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-bot selected" data-bot="deepblue">
+                        <div class="ai-bot-header">
+                            <div class="ai-bot-name">Deep Blue</div>
+                            <div class="ai-bot-difficulty">Master</div>
+                        </div>
+                        <div class="ai-bot-description">
+                            Inspired by IBM's famous chess computer. Strong positional play.
+                        </div>
+                        <div class="ai-bot-stats">
+                            <div class="ai-bot-rating">Rating: 2000-2200</div>
+                            <div class="ai-bot-winrate">Win Rate: 92%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-bot" data-bot="tactical">
+                        <div class="ai-bot-header">
+                            <div class="ai-bot-name">Tactical Storm</div>
+                            <div class="ai-bot-difficulty">Advanced</div>
+                        </div>
+                        <div class="ai-bot-description">
+                            Specializes in tactical combinations and sacrifices. Great for practicing calculation.
+                        </div>
+                        <div class="ai-bot-stats">
+                            <div class="ai-bot-rating">Rating: 1600-1800</div>
+                            <div class="ai-bot-winrate">Win Rate: 78%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-bot" data-bot="positional">
+                        <div class="ai-bot-header">
+                            <div class="ai-bot-name">Positional Master</div>
+                            <div class="ai-bot-difficulty">Intermediate</div>
+                        </div>
+                        <div class="ai-bot-description">
+                            Focuses on pawn structures and long-term planning. Less tactical, more strategic.
+                        </div>
+                        <div class="ai-bot-stats">
+                            <div class="ai-bot-rating">Rating: 1400-1600</div>
+                            <div class="ai-bot-winrate">Win Rate: 70%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-bot" data-bot="beginner">
+                        <div class="ai-bot-header">
+                            <div class="ai-bot-name">Friendly Mentor</div>
+                            <div class="ai-bot-difficulty">Beginner</div>
+                        </div>
+                        <div class="ai-bot-description">
+                            Perfect for new players. Makes occasional mistakes and explains its moves.
+                        </div>
+                        <div class="ai-bot-stats">
+                            <div class="ai-bot-rating">Rating: 800-1000</div>
+                            <div class="ai-bot-winrate">Win Rate: 45%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-bot" data-bot="random">
+                        <div class="ai-bot-header">
+                            <div class="ai-bot-name">Wildcard</div>
+                            <div class="ai-bot-difficulty">Variable</div>
+                        </div>
+                        <div class="ai-bot-description">
+                            Plays unpredictably, from brilliant to terrible moves. Good for surprise training.
+                        </div>
+                        <div class="ai-bot-stats">
+                            <div class="ai-bot-rating">Rating: 500-2000</div>
+                            <div class="ai-bot-winrate">Win Rate: 50%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="game-controls" style="margin-top: 30px;">
+                    <button class="control-btn secondary" id="ai-settings-btn">
+                        <i class="fas fa-cog"></i> AI Settings
+                    </button>
+                    <button class="control-btn" id="challenge-ai-btn">
+                        <i class="fas fa-robot"></i> Challenge Selected Bot
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Online Section -->
+            <div class="section" id="online-section" style="display: none;">
+                <h2>Online Players</h2>
+                <p>Challenge other players or join open games.</p>
+                
+                <div class="game-controls">
+                    <button class="control-btn" id="quick-play-btn">
+                        <i class="fas fa-bolt"></i> Quick Play
+                    </button>
+                    <button class="control-btn secondary" id="create-game-btn">
+                        <i class="fas fa-plus"></i> Create Game
+                    </button>
+                </div>
+                
+                <div class="online-players" style="margin-top: 20px; width: 100%; max-width: 800px;">
+                    <div class="sidebar-title">
+                        <span>Available Players</span>
+                        <i class="fas fa-sync-alt" id="refresh-players"></i>
+                    </div>
+                    
+                    <div class="friends-list">
+                        <div class="friend-item">
+                            <div class="friend-avatar">CH</div>
+                            <div class="friend-info">
+                                <div class="friend-name">ChessMaster</div>
+                                <div class="friend-status online">Online - Rating: 1950</div>
+                            </div>
+                            <div class="friend-actions">
+                                <div class="friend-action-btn" title="Challenge">
+                                    <i class="fas fa-chess-knight"></i>
+                                </div>
+                                <div class="friend-action-btn" title="Message">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="friend-item">
+                            <div class="friend-avatar">TP</div>
+                            <div class="friend-info">
+                                <div class="friend-name">TacticalPlayer</div>
+                                <div class="friend-status online">Online - Rating: 1720</div>
+                            </div>
+                            <div class="friend-actions">
+                                <div class="friend-action-btn" title="Challenge">
+                                    <i class="fas fa-chess-knight"></i>
+                                </div>
+                                <div class="friend-action-btn" title="Message">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="friend-item">
+                            <div class="friend-avatar">NG</div>
+                            <div class="friend-info">
+                                <div class="friend-name">NewbieGamer</div>
+                                <div class="friend-status online">Online - Rating: 1200</div>
+                            </div>
+                            <div class="friend-actions">
+                                <div class="friend-action-btn" title="Challenge">
+                                    <i class="fas fa-chess-knight"></i>
+                                </div>
+                                <div class="friend-action-btn" title="Message">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="friend-item">
+                            <div class="friend-avatar">QP</div>
+                            <div class="friend-info">
+                                <div class="friend-name">QueenPawn</div>
+                                <div class="friend-status playing">Playing - Rating: 1850</div>
+                            </div>
+                            <div class="friend-actions">
+                                <div class="friend-action-btn" title="Spectate">
+                                    <i class="fas fa-eye"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Friends Section -->
+            <div class="section" id="friends-section" style="display: none;">
+                <h2>Friends List</h2>
+                <p>Manage your friends and see their status.</p>
+                
+                <div class="game-controls">
+                    <button class="control-btn" id="add-friend-btn">
+                        <i class="fas fa-user-plus"></i> Add Friend
+                    </button>
+                    <button class="control-btn secondary" id="friend-requests-btn">
+                        <i class="fas fa-user-clock"></i> Friend Requests (2)
+                    </button>
+                </div>
+                
+                <div class="friends-list" style="margin-top: 20px; width: 100%; max-width: 800px;">
+                    <div class="friend-item">
+                        <div class="friend-avatar">AM</div>
+                        <div class="friend-info">
+                            <div class="friend-name">AliceMaster</div>
+                            <div class="friend-status online">Online - Playing Chess 960</div>
+                        </div>
+                        <div class="friend-actions">
+                            <div class="friend-action-btn" title="Challenge">
+                                <i class="fas fa-chess-knight"></i>
+                            </div>
+                            <div class="friend-action-btn" title="Message">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="friend-item">
+                        <div class="friend-avatar">BC</div>
+                        <div class="friend-info">
+                            <div class="friend-name">BobChess</div>
+                            <div class="friend-status online">Online - Available</div>
+                        </div>
+                        <div class="friend-actions">
+                            <div class="friend-action-btn" title="Challenge">
+                                <i class="fas fa-chess-knight"></i>
+                            </div>
+                            <div class="friend-action-btn" title="Message">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="friend-item">
+                        <div class="friend-avatar">CP</div>
+                        <div class="friend-info">
+                            <div class="friend-name">ChessPro</div>
+                            <div class="friend-status playing">Playing - Rating: 2100</div>
+                        </div>
+                        <div class="friend-actions">
+                            <div class="friend-action-btn" title="Spectate">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <div class="friend-action-btn" title="Message">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="friend-item">
+                        <div class="friend-avatar">DC</div>
+                        <div class="friend-info">
+                            <div class="friend-name">DavidC</div>
+                            <div class="friend-status offline">Last seen 2 hours ago</div>
+                        </div>
+                        <div class="friend-actions">
+                            <div class="friend-action-btn" title="Message">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Right Sidebar -->
+        <div class="sidebar right-sidebar">
+            <div class="sidebar-title">
+                <span>Chat</span>
+                <i class="fas fa-comment-dots"></i>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-header">
+                    Global Chat
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message">
+                        <div class="message-info">
+                            <span class="message-sender">ChessMaster</span>
+                            <span class="message-time">12:30 PM</span>
+                        </div>
+                        <div class="message-text">
+                            Anyone up for a blitz game?
+                        </div>
+                    </div>
+                    
+                    <div class="message self">
+                        <div class="message-info">
+                            <span class="message-sender">You</span>
+                            <span class="message-time">12:32 PM</span>
+                        </div>
+                        <div class="message-text">
+                            I'm playing against an AI right now, maybe later!
+                        </div>
+                    </div>
+                    
+                    <div class="message">
+                        <div class="message-info">
+                            <span class="message-sender">TacticalPlayer</span>
+                            <span class="message-time">12:33 PM</span>
+                        </div>
+                        <div class="message-text">
+                            I just beat the Quantum Bot! So excited!
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" placeholder="Type your message..." id="chat-input">
+                    <button id="send-message-btn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+            
+            <div class="sidebar-title" style="margin-top: 20px;">
+                <span>Game Stats</span>
+                <i class="fas fa-chart-line"></i>
+            </div>
+            
+            <div style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Games Played:</span>
+                    <span>127</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Wins:</span>
+                    <span>68 (53.5%)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Losses:</span>
+                    <span>45 (35.4%)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Draws:</span>
+                    <span>14 (11.1%)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Current Streak:</span>
+                    <span style="color: var(--success);">3 wins</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profile Modal -->
+    <div class="modal" id="profile-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Profile Settings</div>
+                <div class="modal-close">&times;</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" value="JohnDoe">
+                </div>
+                
+                <div class="form-group">
+                    <label for="avatar-color">Avatar Color</label>
+                    <input type="color" id="avatar-color" value="#3498db">
+                </div>
+                
+                <div class="form-group">
+                    <label for="status-message">Status Message</label>
+                    <input type="text" id="status-message" placeholder="Enter a status message">
+                </div>
+                
+                <div class="form-group">
+                    <label for="theme">Theme</label>
+                    <select id="theme">
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                        <option value="blue">Blue</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="control-btn secondary" id="cancel-profile-btn">Cancel</button>
+                <button class="control-btn" id="save-profile-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Friend Request Modal -->
+    <div class="modal" id="friend-requests-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Friend Requests (2)</div>
+                <div class="modal-close">&times;</div>
+            </div>
+            <div class="modal-body">
+                <div class="friend-item">
+                    <div class="friend-avatar">EC</div>
+                    <div class="friend-info">
+                        <div class="friend-name">EmmaChess</div>
+                        <div class="friend-status">Rating: 1550</div>
+                    </div>
+                    <div class="friend-actions">
+                        <div class="friend-action-btn success" title="Accept">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="friend-action-btn danger" title="Decline">
+                            <i class="fas fa-times"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="friend-item">
+                    <div class="friend-avatar">FC</div>
+                    <div class="friend-info">
+                        <div class="friend-name">FrankPlayer</div>
+                        <div class="friend-status">Rating: 1780</div>
+                    </div>
+                    <div class="friend-actions">
+                        <div class="friend-action-btn success" title="Accept">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="friend-action-btn danger" title="Decline">
+                            <i class="fas fa-times"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="control-btn" id="close-friend-requests-btn">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Friend Modal -->
+    <div class="modal" id="add-friend-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Add Friend</div>
+                <div class="modal-close">&times;</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="friend-username">Username</label>
+                    <input type="text" id="friend-username" placeholder="Enter username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="friend-message">Message (Optional)</label>
+                    <textarea id="friend-message" placeholder="Add a personal message"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="control-btn secondary" id="cancel-add-friend-btn">Cancel</button>
+                <button class="control-btn" id="send-friend-request-btn">Send Request</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Challenge Modal -->
+    <div class="modal" id="challenge-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Challenge Player</div>
+                <div class="modal-close">&times;</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="challenge-time-control">Time Control</label>
+                    <select id="challenge-time-control">
+                        <option value="1|0">1 min</option>
+                        <option value="3|0">3 min</option>
+                        <option value="5|0">5 min</option>
+                        <option value="10|0">10 min</option>
+                        <option value="15|10" selected>15|10</option>
+                        <option value="30|0">30 min</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="challenge-variant">Variant</label>
+                    <select id="challenge-variant">
+                        <option value="standard">Standard Chess</option>
+                        <option value="960">Chess 960</option>
+                        <option value="atomic">Atomic Chess</option>
+                        <option value="crazyhouse">Crazyhouse</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="challenge-message">Message (Optional)</label>
+                    <textarea id="challenge-message" placeholder="Add a personal message"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="control-btn secondary" id="cancel-challenge-btn">Cancel</button>
+                <button class="control-btn" id="send-challenge-btn">Send Challenge</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Over Modal -->
+    <div class="modal" id="game-over-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Game Over</div>
+                <div class="modal-close">&times;</div>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <h3 id="game-result-text" style="margin-bottom: 20px;">Checkmate! You won!</h3>
+                <div style="font-size: 48px; margin-bottom: 20px;">
+                    <i class="fas fa-trophy" style="color: gold;"></i>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <div>Rating change: <span style="color: var(--success);">+15</span></div>
+                    <div>New rating: <strong>1665</strong></div>
+                </div>
+                <div style="display: flex; justify-content: center; gap: 15px;">
+                    <button class="control-btn" id="rematch-btn">
+                        <i class="fas fa-redo"></i> Rematch
+                    </button>
+                    <button class="control-btn secondary" id="new-game-modal-btn">
+                        <i class="fas fa-plus"></i> New Game
+                    </button>
+                    <button class="control-btn secondary" id="analyze-game-btn">
+                        <i class="fas fa-search"></i> Analyze
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Simulate loading
+        window.addEventListener('DOMContentLoaded', (event) => {
+            setTimeout(() => {
+                document.querySelector('.loading-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.querySelector('.loading-screen').style.display = 'none';
+                    document.querySelector('.container').classList.add('loaded');
+                    
+                    // Initialize chess board
+                    initializeChessBoard();
+                    
+                    // Initialize event listeners
+                    setupEventListeners();
+                }, 1000);
+            }, 2000);
+        });
+        
+        // Chess board initialization
+        function initializeChessBoard() {
+            const board = document.getElementById('chess-board');
+            board.innerHTML = '';
+            
+            // Create 8x8 chess board
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    
+                    // Add pieces for initial setup (simplified)
+                    if (row === 0 || row === 7 || row === 1 || row === 6) {
+                        const piece = document.createElement('div');
+                        piece.className = 'piece';
+                        
+                        let pieceType = '';
+                        let color = row < 2 ? 'black' : 'white';
+                        
+                        if (row === 0 || row === 7) {
+                            // Back row pieces
+                            const pieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+                            pieceType = pieces[col];
+                        } else {
+                            // Pawns
+                            pieceType = 'pawn';
+                        }
+                        
+                        piece.style.backgroundImage = `url('https://images.chesscomfiles.com/chess-themes/pieces/neo/150/${color[0]}${pieceType[0]}.png')`;
+                        square.appendChild(piece);
+                    }
+                    
+                    board.appendChild(square);
+                }
+            }
+            
+            // Initialize move history
+            updateMoveHistory([
+                { move: 1, white: 'e4', black: 'e5' },
+                { move: 2, white: 'Nf3', black: 'Nc6' },
+                { move: 3, white: 'Bb5', black: 'a6' },
+                { move: 4, white: 'Ba4', black: 'Nf6' },
+                { move: 5, white: 'O-O', black: 'Be7' }
+            ]);
+        }
+        
+        function updateMoveHistory(moves) {
+            const moveList = document.getElementById('move-list');
+            moveList.innerHTML = '';
+            
+            moves.forEach(moveObj => {
+                const moveElement = document.createElement('div');
+                moveElement.className = 'move-item';
+                moveElement.innerHTML = `
+                    <div>${moveObj.move}. ${moveObj.white || ''}</div>
+                    <div>${moveObj.black || ''}</div>
+                `;
+                moveList.appendChild(moveElement);
+            });
+        }
+        
+        // Event listeners setup
+        function setupEventListeners() {
+            // Navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.dataset.section;
+                    
+                    // Update active nav link
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show corresponding section
+                    document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+                    document.getElementById(`${section}-section`).style.display = 'block';
+                });
+            });
+            
+            // Profile modal
+            document.getElementById('user-avatar').addEventListener('click', () => {
+                document.getElementById('profile-modal').classList.add('active');
+            });
+            
+            // Modal close buttons
+            document.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.closest('.modal').classList.remove('active');
+                });
+            });
+            
+            // Cancel buttons
+            document.getElementById('cancel-profile-btn').addEventListener('click', () => {
+                document.getElementById('profile-modal').classList.remove('active');
+            });
+            
+            // Friend requests
+            document.getElementById('friend-requests-btn').addEventListener('click', () => {
+                document.getElementById('friend-requests-modal').classList.add('active');
+            });
+            
+            document.getElementById('close-friend-requests-btn').addEventListener('click', () => {
+                document.getElementById('friend-requests-modal').classList.remove('active');
+            });
+            
+            // Add friend
+            document.getElementById('add-friend-btn').addEventListener('click', () => {
+                document.getElementById('add-friend-modal').classList.add('active');
+            });
+            
+            document.getElementById('cancel-add-friend-btn').addEventListener('click', () => {
+                document.getElementById('add-friend-modal').classList.remove('active');
+            });
+            
+            // Challenge buttons
+            document.querySelectorAll('.friend-action-btn[title="Challenge"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.getElementById('challenge-modal').classList.add('active');
+                });
+            });
+            
+            document.getElementById('cancel-challenge-btn').addEventListener('click', () => {
+                document.getElementById('challenge-modal').classList.remove('active');
+            });
+            
+            // AI bot selection
+            document.querySelectorAll('.ai-bot').forEach(bot => {
+                bot.addEventListener('click', function() {
+                    document.querySelectorAll('.ai-bot').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                });
+            });
+            
+            // Challenge AI button
+            document.getElementById('challenge-ai-btn').addEventListener('click', function() {
+                const selectedBot = document.querySelector('.ai-bot.selected').dataset.bot;
+                alert(`Starting game against ${selectedBot} bot!`);
+                // In a real implementation, this would initialize a game against the selected AI
+                
+                // Show game over modal after 3 seconds for demo
+                setTimeout(() => {
+                    document.getElementById('game-over-modal').classList.add('active');
+                }, 3000);
+            });
+            
+            // Quick play button
+            document.getElementById('quick-play-btn').addEventListener('click', function() {
+                alert('Searching for an opponent...');
+                // In a real implementation, this would match the player with someone of similar rating
+            });
+            
+            // Create game button
+            document.getElementById('create-game-btn').addEventListener('click', function() {
+                document.getElementById('challenge-modal').classList.add('active');
+            });
+            
+            // New game button
+            document.getElementById('new-game-btn').addEventListener('click', function() {
+                // Show AI section
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                document.querySelector('.nav-link[data-section="ai"]').classList.add('active');
+                
+                document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+                document.getElementById('ai-section').style.display = 'block';
+            });
+            
+            // New game from modal
+            document.getElementById('new-game-modal-btn').addEventListener('click', function() {
+                document.getElementById('game-over-modal').classList.remove('active');
+                document.getElementById('new-game-btn').click();
+            });
+            
+            // Flip board button
+            document.getElementById('flip-board-btn').addEventListener('click', function() {
+                const board = document.getElementById('chess-board');
+                board.classList.toggle('flipped');
+                // In a real implementation, this would flip the board perspective
+            });
+            
+            // Undo move button
+            document.getElementById('undo-move-btn').addEventListener('click', function() {
+                alert('Move undone!');
+                // In a real implementation, this would undo the last move
+            });
+            
+            // Resign button
+            document.getElementById('resign-btn').addEventListener('click', function() {
+                if (confirm('Are you sure you want to resign?')) {
+                    document.getElementById('game-result-text').textContent = 'You resigned!';
+                    document.getElementById('game-over-modal').classList.add('active');
+                }
+            });
+            
+            // Offer draw button
+            document.getElementById('offer-draw-btn').addEventListener('click', function() {
+                alert('Draw offer sent to opponent!');
+                // In a real implementation, this would send a draw offer to the opponent
+            });
+            
+            // Send message in chat
+            document.getElementById('send-message-btn').addEventListener('click', sendMessage);
+            document.getElementById('chat-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') sendMessage();
+            });
+            
+            function sendMessage() {
+                const input = document.getElementById('chat-input');
+                const message = input.value.trim();
+                if (message) {
+                    const chatMessages = document.getElementById('chat-messages');
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'message self';
+                    messageElement.innerHTML = `
+                        <div class="message-info">
+                            <span class="message-sender">You</span>
+                            <span class="message-time">${timeString}</span>
+                        </div>
+                        <div class="message-text">
+                            ${message}
+                        </div>
+                    `;
+                    
+                    chatMessages.appendChild(messageElement);
+                    input.value = '';
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    
+                    // Simulate reply after 1-3 seconds
+                    setTimeout(() => {
+                        const replies = [
+                            "Nice move!",
+                            "Good game!",
+                            "Want to play again?",
+                            "I'm still learning!",
+                            "That was a tricky position."
+                        ];
+                        const randomReply = replies[Math.floor(Math.random() * replies.length)];
+                        
+                        const replyElement = document.createElement('div');
+                        replyElement.className = 'message';
+                        replyElement.innerHTML = `
+                            <div class="message-info">
+                                <span class="message-sender">ChessBot</span>
+                                <span class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div class="message-text">
+                                ${randomReply}
+                            </div>
+                        `;
+                        
+                        chatMessages.appendChild(replyElement);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }, 1000 + Math.random() * 2000);
+                }
+            }
+            
+            // Piece dragging (simplified)
+            const pieces = document.querySelectorAll('.piece');
+            pieces.forEach(piece => {
+                piece.addEventListener('mousedown', function(e) {
+                    this.classList.add('dragging');
+                    
+                    const movePiece = (e) => {
+                        this.style.position = 'absolute';
+                        this.style.left = `${e.clientX - this.offsetWidth / 2}px`;
+                        this.style.top = `${e.clientY - this.offsetHeight / 2}px`;
+                    };
+                    
+                    document.addEventListener('mousemove', movePiece);
+                    
+                    document.addEventListener('mouseup', () => {
+                        this.classList.remove('dragging');
+                        document.removeEventListener('mousemove', movePiece);
+                        
+                        // Reset position (in a real implementation, this would handle valid moves)
+                        this.style.position = '';
+                        this.style.left = '';
+                        this.style.top = '';
+                    }, { once: true });
+                });
+            });
+            
+            // Square highlighting for move options
+            const squares = document.querySelectorAll('.square');
+            squares.forEach(square => {
+                square.addEventListener('click', function() {
+                    // In a real implementation, this would handle square selection and moves
+                    
+                    // Demo: highlight clicked square and some random move options
+                    document.querySelectorAll('.square').forEach(sq => {
+                        sq.classList.remove('highlight', 'move-option', 'capture-option');
+                    });
+                    
+                    this.classList.add('highlight');
+                    
+                    // Add some random move options for demo
+                    const row = parseInt(this.dataset.row);
+                    const col = parseInt(this.dataset.col);
+                    
+                    for (let i = 0; i < 3; i++) {
+                        const r = Math.max(0, Math.min(7, row + Math.floor(Math.random() * 3) - 1));
+                        const c = Math.max(0, Math.min(7, col + Math.floor(Math.random() * 3) - 1));
+                        
+                        if (r !== row || c !== col) {
+                            const targetSquare = document.querySelector(`.square[data-row="${r}"][data-col="${c}"]`);
+                            if (targetSquare) {
+                                if (targetSquare.querySelector('.piece')) {
+                                    targetSquare.classList.add('capture-option');
+                                } else {
+                                    targetSquare.classList.add('move-option');
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
